@@ -5,6 +5,7 @@ Example:
     ingest("docs/company_handbook.pdf")
 """
 
+import os
 from pathlib import Path
 
 from dotenv import load_dotenv
@@ -15,7 +16,7 @@ from llama_index.core import (
     VectorStoreIndex,
     load_index_from_storage,
 )
-from llama_index.embeddings.openai import OpenAIEmbedding
+from llama_index.embeddings.google_genai import GoogleGenAIEmbedding
 
 ROOT = Path(__file__).resolve().parent.parent
 load_dotenv(ROOT / ".env.local")
@@ -24,8 +25,11 @@ load_dotenv(ROOT.parent / ".env.local")
 load_dotenv(ROOT.parent / ".env")
 
 PERSIST_DIR = ROOT / "chat-engine-storage"
-EMBED_MODEL = "text-embedding-3-small"
-Settings.embed_model = OpenAIEmbedding(model=EMBED_MODEL)
+EMBED_MODEL = "gemini-embedding-001"
+Settings.embed_model = GoogleGenAIEmbedding(
+    model_name=EMBED_MODEL,
+    api_key=os.getenv("GOOGLE_API_KEY") or os.getenv("GEMINI_API_KEY"),
+)
 
 
 def ingest(file_path: str | Path) -> None:
@@ -61,6 +65,3 @@ def ingest(file_path: str | Path) -> None:
 if __name__ == "__main__":
     # Change this path (or call ingest() from another script / REPL)
     ingest(ROOT / "docs" / "week6_api_microservices_mcp.pdf")
-
-
-

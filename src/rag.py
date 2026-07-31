@@ -3,12 +3,13 @@
 from __future__ import annotations
 
 import logging
+import os
 from pathlib import Path
 
 from dotenv import load_dotenv
 from llama_index.core import Settings, StorageContext, load_index_from_storage
-from llama_index.embeddings.openai import OpenAIEmbedding
-from llama_index.llms.openai import OpenAI
+from llama_index.embeddings.google_genai import GoogleGenAIEmbedding
+from llama_index.llms.google_genai import GoogleGenAI
 
 logger = logging.getLogger("rag")
 
@@ -19,10 +20,14 @@ load_dotenv(ROOT.parent / ".env.local")
 load_dotenv(ROOT.parent / ".env")
 
 PERSIST_DIR = ROOT / "chat-engine-storage"
-EMBED_MODEL = "text-embedding-3-small"
-LLM_MODEL = "gpt-4o-mini"
+EMBED_MODEL = "gemini-embedding-001"
+LLM_MODEL = "gemini-2.5-flash"
 
 _index = None
+
+
+def _api_key() -> str | None:
+    return os.getenv("GOOGLE_API_KEY") or os.getenv("GEMINI_API_KEY")
 
 
 def invalidate_index() -> None:
@@ -40,8 +45,9 @@ def get_index():
                 f"No RAG index at {PERSIST_DIR}. Upload documents via POST /api/files first."
             )
         logger.info("Loading RAG index from %s", PERSIST_DIR)
-        Settings.embed_model = OpenAIEmbedding(model=EMBED_MODEL)
-        Settings.llm = OpenAI(model=LLM_MODEL)
+        api_key = _api_key()
+        Settings.embed_model = GoogleGenAIEmbedding(model_name=EMBED_MODEL, api_key=api_key)
+        Settings.llm = GoogleGenAI(model=LLM_MODEL, api_key=api_key)
         storage_context = StorageContext.from_defaults(persist_dir=str(PERSIST_DIR))
         _index = load_index_from_storage(storage_context)
     return _index
