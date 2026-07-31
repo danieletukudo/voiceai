@@ -127,58 +127,6 @@
       overflow: hidden;
     }
 
-    .panel + .panel {
-      margin-top: 1.25rem;
-    }
-
-    .panel-head {
-      padding: 1.15rem 1.25rem 0.35rem;
-    }
-
-    .panel-head h2 {
-      margin: 0;
-      font-family: var(--display);
-      font-size: 1.05rem;
-      font-weight: 650;
-      letter-spacing: -0.02em;
-    }
-
-    .panel-head p {
-      margin: 0.35rem 0 0;
-      color: var(--muted);
-      font-size: 0.88rem;
-      line-height: 1.45;
-    }
-
-    .actions {
-      display: flex;
-      gap: 0.4rem;
-      flex-shrink: 0;
-    }
-
-    .download {
-      appearance: none;
-      border: 1px solid var(--line);
-      background: var(--green-soft);
-      color: var(--green-deep);
-      font: inherit;
-      font-size: 0.84rem;
-      font-weight: 600;
-      padding: 0.45rem 0.75rem;
-      border-radius: 999px;
-      cursor: pointer;
-      text-decoration: none;
-      transition: background 0.15s ease, color 0.15s ease, border-color 0.15s ease;
-    }
-
-    .download:hover,
-    .download:focus-visible {
-      background: var(--green);
-      color: #fff;
-      border-color: var(--green);
-      outline: none;
-    }
-
     .drop {
       position: relative;
       display: grid;
@@ -421,19 +369,7 @@
       <ul class="list" id="list"></ul>
     </section>
 
-    <section class="panel" aria-label="Call transcripts">
-      <div class="panel-head">
-        <h2>Call transcripts</h2>
-        <p>Saved when a call ends. Download the Q&amp;A as a text file.</p>
-      </div>
-      <div class="toolbar">
-        <h3>Transcripts <span class="count" id="response-count">0</span></h3>
-        <p class="status" id="response-msg" role="status" aria-live="polite"></p>
-      </div>
-      <ul class="list" id="response-list"></ul>
-    </section>
-
-    <footer>Knowledge files go in docs. Call transcripts are stored separately for download.</footer>
+    <footer>Files are stored in docs and ingested for the call agent.</footer>
   </main>
 
   <script>
@@ -442,9 +378,6 @@
     const count = document.getElementById("count");
     const drop = document.getElementById("drop");
     const fileInput = document.getElementById("file");
-    const responseMsg = document.getElementById("response-msg");
-    const responseList = document.getElementById("response-list");
-    const responseCount = document.getElementById("response-count");
 
     function formatSize(bytes) {
       if (bytes < 1024) return bytes + " B";
@@ -452,9 +385,9 @@
       return (bytes / (1024 * 1024)).toFixed(1) + " MB";
     }
 
-    function setStatus(el, text, kind) {
-      el.textContent = text || "";
-      el.className = "status" + (kind ? " " + kind : "");
+    function setStatus(text, kind) {
+      msg.textContent = text || "";
+      msg.className = "status" + (kind ? " " + kind : "");
     }
 
     function fileIcon() {
@@ -487,40 +420,16 @@
       `).join("");
     }
 
-    async function refreshResponses() {
-      const files = await fetch("/api/responses").then((r) => r.json());
-      responseCount.textContent = String(files.length);
-
-      if (!files.length) {
-        responseList.innerHTML = `<li class="empty">No call transcripts yet<span>They appear here after a call ends</span></li>`;
-        return;
-      }
-
-      responseList.innerHTML = files.map((f, i) => `
-        <li style="animation-delay:${i * 40}ms">
-          ${fileIcon()}
-          <div class="meta">
-            <span class="name" title="${f.name}">${f.name}</span>
-            <span class="size">${formatSize(f.size)}</span>
-          </div>
-          <div class="actions">
-            <a class="download" href="/api/responses/${encodeURIComponent(f.name)}" download="${f.name}">Download</a>
-            <button class="delete" type="button" data-response-name="${f.name}">Remove</button>
-          </div>
-        </li>
-      `).join("");
-    }
-
     async function upload(file) {
       if (!file) return;
-      setStatus(msg, "Uploading and ingesting…", "busy");
+      setStatus("Uploading and ingesting…", "busy");
       const fd = new FormData();
       fd.append("file", file);
       const r = await fetch("/api/files", { method: "POST", body: fd });
       if (r.ok) {
-        setStatus(msg, "Ingested successfully.", "ok");
+        setStatus("Ingested successfully.", "ok");
       } else {
-        setStatus(msg, "Upload failed: " + await r.text(), "err");
+        setStatus("Upload failed: " + await r.text(), "err");
       }
       fileInput.value = "";
       refresh();
@@ -550,34 +459,17 @@
     list.addEventListener("click", async (e) => {
       const btn = e.target.closest("button[data-name]");
       if (!btn) return;
-      setStatus(msg, "Removing…", "busy");
+      setStatus("Removing…", "busy");
       const r = await fetch("/api/files/" + encodeURIComponent(btn.dataset.name), { method: "DELETE" });
       if (r.ok) {
-        setStatus(msg, "Removed.", "ok");
+        setStatus("Removed.", "ok");
       } else {
-        setStatus(msg, "Delete failed: " + await r.text(), "err");
+        setStatus("Delete failed: " + await r.text(), "err");
       }
       refresh();
     });
 
-    responseList.addEventListener("click", async (e) => {
-      const btn = e.target.closest("button[data-response-name]");
-      if (!btn) return;
-      setStatus(responseMsg, "Removing…", "busy");
-      const r = await fetch(
-        "/api/responses/" + encodeURIComponent(btn.dataset.responseName),
-        { method: "DELETE" }
-      );
-      if (r.ok) {
-        setStatus(responseMsg, "Removed.", "ok");
-      } else {
-        setStatus(responseMsg, "Delete failed: " + await r.text(), "err");
-      }
-      refreshResponses();
-    });
-
     refresh();
-    refreshResponses();
   </script>
 </body>
 </html>

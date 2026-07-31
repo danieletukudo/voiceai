@@ -15,5 +15,3 @@ __pycache__/
 chat-engine-storage/
 docs/*
 !docs/.gitkeep
-responses/*
-!responses/.gitkeep

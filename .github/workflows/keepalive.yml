@@ -1,0 +1,29 @@
+# External ping so Render free tier does not spin down from inactivity.
+# Runs on GitHub's servers (counts as real inbound traffic to Render).
+#
+# Setup (once):
+#   Repo → Settings → Secrets and variables → Actions
+#   Add secret RENDER_HEALTH_URL = https://YOUR-APP.onrender.com/health
+name: Keep Render awake
+
+on:
+  schedule:
+    # Every 5 minutes (GitHub can delay cron a bit; still usually fine)
+    - cron: "*/5 * * * *"
+  workflow_dispatch: # allow manual "Run workflow" from the Actions tab
+
+jobs:
+  ping:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Ping health endpoint
+        env:
+          URL: ${{ secrets.RENDER_HEALTH_URL }}
+        run: |
+          if [ -z "$URL" ]; then
+            echo "Missing secret RENDER_HEALTH_URL"
+            exit 1
+          fi
+          curl -fsS --max-time 30 "$URL"
+          echo
+          echo "OK $(date -u +%Y-%m-%dT%H:%M:%SZ)"
