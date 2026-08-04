@@ -36,6 +36,35 @@ API_PORT = int(os.getenv("PORT") or os.getenv("API_PORT", "8000"))
 app = FastAPI(title="Knowledge API")
 
 
+def _bootstrap_rag_from_docs() -> None:
+    """On a fresh host (empty chat-engine-storage), ingest every file in docs/.
+
+    Render's disk is ephemeral: after each deploy the vector store is gone even
+    when seed documents are copied into the image. Without this, the Library
+    lists files but /ask has nothing to retrieve.
+    """
+    persist = ROOT / "chat-engine-storage"
+    if (persist / "docstore.json").exists():
+        return
+    seed_files = [
+        f
+        for f in sorted(DOCS.iterdir())
+        if f.is_file() and not f.name.startswith(".")
+    ]
+    if not seed_files:
+        return
+    for path in seed_files:
+        try:
+            ingest(path)
+        except Exception:
+            # Missing API key / bad file should not prevent the API from booting.
+            print(f"WARN: bootstrap ingest failed for {path.name}", flush=True)
+    invalidate_index()
+
+
+_bootstrap_rag_from_docs()
+
+
 class AskRequest(BaseModel):
     question: str = Field(..., min_length=1)
     company_id: str | None = None
