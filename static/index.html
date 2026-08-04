@@ -464,7 +464,7 @@
       </div>
     </section>
 
-    <footer>Documents go to docs for RAG. Call transcripts are listed from TRANSCRIPTS_DIR.</footer>
+    <footer>Documents are stored on this API host. Call transcripts are uploaded here when a hosted call ends.</footer>
   </main>
 
   <script>
@@ -518,24 +518,34 @@
     }
 
     async function refresh() {
-      const files = await fetch("/api/files").then((r) => r.json());
-      count.textContent = String(files.length);
+      try {
+        const r = await fetch("/api/files");
+        if (!r.ok) throw new Error(await r.text());
+        const files = await r.json();
+        count.textContent = String(files.length);
 
-      if (!files.length) {
-        list.innerHTML = `<li class="empty">No documents yet<span>Upload your first file to get started</span></li>`;
-        return;
+        if (!files.length) {
+          list.innerHTML = `<li class="empty">No documents yet<span>Upload your first file to get started</span></li>`;
+          return;
+        }
+
+        list.innerHTML = files.map((f, i) => `
+          <li style="animation-delay:${i * 40}ms">
+            ${fileIcon()}
+            <div class="meta">
+              <span class="name" title="${escapeHtml(f.name)}">${escapeHtml(f.name)}</span>
+              <span class="size">${formatSize(f.size)}${f.modified ? " · " + escapeHtml(formatWhen(f.modified)) : ""}</span>
+            </div>
+            <div class="actions">
+              <a class="btn" href="/api/files/${encodeURIComponent(f.name)}/download" download="${escapeHtml(f.name)}">Download</a>
+              <button class="delete" type="button" data-name="${escapeHtml(f.name)}">Remove</button>
+            </div>
+          </li>
+        `).join("");
+      } catch (err) {
+        setStatus(msg, "Failed to load documents.", "err");
+        list.innerHTML = `<li class="empty">Could not load documents<span>${escapeHtml(err.message || err)}</span></li>`;
       }
-
-      list.innerHTML = files.map((f, i) => `
-        <li style="animation-delay:${i * 40}ms">
-          ${fileIcon()}
-          <div class="meta">
-            <span class="name" title="${escapeHtml(f.name)}">${escapeHtml(f.name)}</span>
-            <span class="size">${formatSize(f.size)}</span>
-          </div>
-          <button class="delete" type="button" data-name="${escapeHtml(f.name)}">Remove</button>
-        </li>
-      `).join("");
     }
 
     async function refreshTranscripts() {

@@ -15,5 +15,8 @@ __pycache__/
 chat-engine-storage/
 docs/*
 !docs/.gitkeep
+!docs/*.txt
+!docs/*.md
+!docs/*.csv
 transcripts/*
 !transcripts/.gitkeep

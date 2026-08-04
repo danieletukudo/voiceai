@@ -105,8 +105,12 @@ async def ask_endpoint(body: AskRequest):
 @app.get("/api/files")
 def list_files():
     return [
-        {"name": f.name, "size": f.stat().st_size}
-        for f in sorted(DOCS.iterdir())
+        {
+            "name": f.name,
+            "size": f.stat().st_size,
+            "modified": _iso_mtime(f),
+        }
+        for f in sorted(DOCS.iterdir(), key=lambda p: p.stat().st_mtime, reverse=True)
         if f.is_file() and not f.name.startswith(".")
     ]
 
@@ -123,6 +127,35 @@ async def upload_file(file: UploadFile = File(...)):
         raise HTTPException(500, f"Ingest failed: {exc}") from exc
     invalidate_index()
     return {"ok": True, "name": path.name}
+
+
+@app.get("/api/files/{name}")
+def get_file_meta(name: str):
+    """Return file metadata (and text content for plain-text docs)."""
+    path = _safe_path(name)
+    if not path.is_file():
+        raise HTTPException(404, "File not found")
+    payload: dict = {
+        "name": path.name,
+        "size": path.stat().st_size,
+        "modified": _iso_mtime(path),
+    }
+    if path.suffix.lower() in {".txt", ".md", ".csv", ".json", ".log"}:
+        payload["content"] = path.read_text(encoding="utf-8", errors="replace")
+    return payload
+
+
+@app.get("/api/files/{name}/download")
+def download_file(name: str):
+    """Download a knowledge-base document."""
+    path = _safe_path(name)
+    if not path.is_file():
+        raise HTTPException(404, "File not found")
+    return FileResponse(
+        path,
+        filename=path.name,
+        content_disposition_type="attachment",
+    )
 
 
 @app.delete("/api/files/{name}")
@@ -149,6 +182,27 @@ def list_transcripts():
         TranscriptInfo(name=f.name, size=f.stat().st_size, modified=_iso_mtime(f))
         for f in files
     ]
+
+
+@app.post("/api/transcripts")
+async def upload_transcript(file: UploadFile = File(...)):
+    """Accept a call transcript from the voice agent (or any client)."""
+    if not file.filename:
+        raise HTTPException(400, "No filename")
+    filename = Path(file.filename).name
+    if not filename.lower().endswith(".txt"):
+        filename = f"{filename}.txt"
+    path = _safe_transcript_path(filename)
+    data = await file.read()
+    if not data:
+        raise HTTPException(400, "Empty transcript")
+    path.write_bytes(data)
+    return {
+        "ok": True,
+        "name": path.name,
+        "size": path.stat().st_size,
+        "modified": _iso_mtime(path),
+    }
 
 
 @app.get("/api/transcripts/{name}", response_model=TranscriptDetail)
