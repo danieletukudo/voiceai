@@ -322,6 +322,83 @@
       opacity: 0.85;
     }
 
+    .section-gap {
+      margin-top: 1.5rem;
+    }
+
+    .actions {
+      display: flex;
+      flex-wrap: wrap;
+      gap: 0.35rem;
+      flex: 0 0 auto;
+    }
+
+    .btn {
+      appearance: none;
+      border: 1px solid transparent;
+      background: transparent;
+      color: var(--muted);
+      font: inherit;
+      font-size: 0.84rem;
+      font-weight: 600;
+      padding: 0.45rem 0.75rem;
+      border-radius: 999px;
+      cursor: pointer;
+      text-decoration: none;
+      transition: background 0.15s ease, color 0.15s ease, border-color 0.15s ease;
+    }
+
+    .btn:hover,
+    .btn:focus-visible {
+      background: var(--green-soft);
+      color: var(--green-deep);
+      border-color: #bfe5cd;
+      outline: none;
+    }
+
+    .viewer {
+      display: none;
+      border-top: 1px solid var(--line);
+      background: #fcfefd;
+      animation: fadeIn 0.28s ease both;
+    }
+
+    .viewer.is-open {
+      display: block;
+    }
+
+    .viewer-head {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      gap: 1rem;
+      padding: 0.9rem 1.15rem;
+      border-bottom: 1px solid var(--line);
+    }
+
+    .viewer-head h4 {
+      margin: 0;
+      font-family: var(--display);
+      font-size: 0.9rem;
+      font-weight: 600;
+      white-space: nowrap;
+      overflow: hidden;
+      text-overflow: ellipsis;
+    }
+
+    .viewer pre {
+      margin: 0;
+      padding: 1.1rem 1.15rem 1.4rem;
+      max-height: 28rem;
+      overflow: auto;
+      white-space: pre-wrap;
+      word-break: break-word;
+      font-family: ui-monospace, SFMono-Regular, Menlo, Consolas, monospace;
+      font-size: 0.82rem;
+      line-height: 1.55;
+      color: var(--ink);
+    }
+
     footer {
       margin-top: 1.25rem;
       color: var(--muted);
@@ -333,7 +410,7 @@
       .shell { padding-top: 1.6rem; }
       .toolbar { flex-direction: column; align-items: flex-start; }
       .list li { align-items: flex-start; }
-      .delete { margin-left: auto; }
+      .delete, .actions { margin-left: auto; }
     }
   </style>
 </head>
@@ -369,7 +446,25 @@
       <ul class="list" id="list"></ul>
     </section>
 
-    <footer>Files are stored in docs and ingested for the call agent.</footer>
+    <section class="panel section-gap" aria-label="Call transcripts">
+      <div class="toolbar">
+        <h3>Call transcripts <span class="count" id="tx-count">0</span></h3>
+        <p class="status" id="tx-msg" role="status" aria-live="polite"></p>
+      </div>
+      <ul class="list" id="tx-list"></ul>
+      <div class="viewer" id="tx-viewer" aria-live="polite">
+        <div class="viewer-head">
+          <h4 id="tx-title">Transcript</h4>
+          <div class="actions">
+            <a class="btn" id="tx-download" href="#" download>Download</a>
+            <button class="btn" type="button" id="tx-close">Close</button>
+          </div>
+        </div>
+        <pre id="tx-body"></pre>
+      </div>
+    </section>
+
+    <footer>Documents go to docs for RAG. Call transcripts are listed from TRANSCRIPTS_DIR.</footer>
   </main>
 
   <script>
@@ -378,6 +473,14 @@
     const count = document.getElementById("count");
     const drop = document.getElementById("drop");
     const fileInput = document.getElementById("file");
+    const txMsg = document.getElementById("tx-msg");
+    const txList = document.getElementById("tx-list");
+    const txCount = document.getElementById("tx-count");
+    const txViewer = document.getElementById("tx-viewer");
+    const txTitle = document.getElementById("tx-title");
+    const txBody = document.getElementById("tx-body");
+    const txDownload = document.getElementById("tx-download");
+    const txClose = document.getElementById("tx-close");
 
     function formatSize(bytes) {
       if (bytes < 1024) return bytes + " B";
@@ -385,9 +488,24 @@
       return (bytes / (1024 * 1024)).toFixed(1) + " MB";
     }
 
-    function setStatus(text, kind) {
-      msg.textContent = text || "";
-      msg.className = "status" + (kind ? " " + kind : "");
+    function formatWhen(iso) {
+      if (!iso) return "";
+      const d = new Date(iso);
+      if (Number.isNaN(d.getTime())) return iso;
+      return d.toLocaleString();
+    }
+
+    function escapeHtml(value) {
+      return String(value)
+        .replaceAll("&", "&amp;")
+        .replaceAll("<", "&lt;")
+        .replaceAll(">", "&gt;")
+        .replaceAll('"', "&quot;");
+    }
+
+    function setStatus(el, text, kind) {
+      el.textContent = text || "";
+      el.className = "status" + (kind ? " " + kind : "");
     }
 
     function fileIcon() {
@@ -412,24 +530,76 @@
         <li style="animation-delay:${i * 40}ms">
           ${fileIcon()}
           <div class="meta">
-            <span class="name" title="${f.name}">${f.name}</span>
+            <span class="name" title="${escapeHtml(f.name)}">${escapeHtml(f.name)}</span>
             <span class="size">${formatSize(f.size)}</span>
           </div>
-          <button class="delete" type="button" data-name="${f.name}">Remove</button>
+          <button class="delete" type="button" data-name="${escapeHtml(f.name)}">Remove</button>
         </li>
       `).join("");
     }
 
+    async function refreshTranscripts() {
+      setStatus(txMsg, "Loading…", "busy");
+      let files;
+      try {
+        const r = await fetch("/api/transcripts");
+        if (!r.ok) throw new Error(await r.text());
+        files = await r.json();
+      } catch (err) {
+        setStatus(txMsg, "Failed to load transcripts.", "err");
+        txList.innerHTML = `<li class="empty">Could not load transcripts<span>${escapeHtml(err.message || err)}</span></li>`;
+        return;
+      }
+
+      txCount.textContent = String(files.length);
+      setStatus(txMsg, files.length ? "" : "No calls recorded yet.");
+
+      if (!files.length) {
+        txList.innerHTML = `<li class="empty">No transcripts yet<span>They appear here after a call ends</span></li>`;
+        return;
+      }
+
+      txList.innerHTML = files.map((f, i) => `
+        <li style="animation-delay:${i * 40}ms">
+          ${fileIcon()}
+          <div class="meta">
+            <span class="name" title="${escapeHtml(f.name)}">${escapeHtml(f.name)}</span>
+            <span class="size">${formatSize(f.size)} · ${escapeHtml(formatWhen(f.modified))}</span>
+          </div>
+          <div class="actions">
+            <button class="btn" type="button" data-view="${escapeHtml(f.name)}">View</button>
+            <a class="btn" href="/api/transcripts/${encodeURIComponent(f.name)}/download" download="${escapeHtml(f.name)}">Download</a>
+          </div>
+        </li>
+      `).join("");
+    }
+
+    async function openTranscript(name) {
+      setStatus(txMsg, "Opening…", "busy");
+      const r = await fetch("/api/transcripts/" + encodeURIComponent(name));
+      if (!r.ok) {
+        setStatus(txMsg, "Open failed: " + await r.text(), "err");
+        return;
+      }
+      const data = await r.json();
+      txTitle.textContent = data.name;
+      txBody.textContent = data.content || "";
+      txDownload.href = "/api/transcripts/" + encodeURIComponent(data.name) + "/download";
+      txDownload.setAttribute("download", data.name);
+      txViewer.classList.add("is-open");
+      setStatus(txMsg, "Loaded.", "ok");
+    }
+
     async function upload(file) {
       if (!file) return;
-      setStatus("Uploading and ingesting…", "busy");
+      setStatus(msg, "Uploading and ingesting…", "busy");
       const fd = new FormData();
       fd.append("file", file);
       const r = await fetch("/api/files", { method: "POST", body: fd });
       if (r.ok) {
-        setStatus("Ingested successfully.", "ok");
+        setStatus(msg, "Ingested successfully.", "ok");
       } else {
-        setStatus("Upload failed: " + await r.text(), "err");
+        setStatus(msg, "Upload failed: " + await r.text(), "err");
       }
       fileInput.value = "";
       refresh();
@@ -459,17 +629,29 @@
     list.addEventListener("click", async (e) => {
       const btn = e.target.closest("button[data-name]");
       if (!btn) return;
-      setStatus("Removing…", "busy");
+      setStatus(msg, "Removing…", "busy");
       const r = await fetch("/api/files/" + encodeURIComponent(btn.dataset.name), { method: "DELETE" });
       if (r.ok) {
-        setStatus("Removed.", "ok");
+        setStatus(msg, "Removed.", "ok");
       } else {
-        setStatus("Delete failed: " + await r.text(), "err");
+        setStatus(msg, "Delete failed: " + await r.text(), "err");
       }
       refresh();
     });
 
+    txList.addEventListener("click", (e) => {
+      const btn = e.target.closest("button[data-view]");
+      if (!btn) return;
+      openTranscript(btn.dataset.view);
+    });
+
+    txClose.addEventListener("click", () => {
+      txViewer.classList.remove("is-open");
+      txBody.textContent = "";
+    });
+
     refresh();
+    refreshTranscripts();
   </script>
 </body>
 </html>
