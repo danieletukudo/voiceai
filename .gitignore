@@ -13,10 +13,5 @@ __pycache__/
 .pytest_cache/
 .mypy_cache/
 chat-engine-storage/
-docs/*
-!docs/.gitkeep
-!docs/*.txt
-!docs/*.md
-!docs/*.csv
-transcripts/*
-!transcripts/.gitkeep
+
+
