@@ -21,7 +21,7 @@ load_dotenv(ROOT.parent / ".env")
 
 PERSIST_DIR = ROOT / "chat-engine-storage"
 EMBED_MODEL = "gemini-embedding-001"
-LLM_MODEL = "gemini-2.5-flash"
+LLM_MODEL = "gemini-3.5-flash"
 
 _index = None
 
