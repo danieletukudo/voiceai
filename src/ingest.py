@@ -119,7 +119,7 @@ def _ensure_text_documents(path: Path, documents: list) -> list:
     return [Document(text=text, metadata=meta)]
 
 
-def _purge_same_file(index: VectorStoreIndex, file_name: str) -> None:
+def _purge_same_file(index: VectorStoreIndex, file_name: str) -> int:
     """Drop prior chunks for this filename so re-ingest replaces, not duplicates."""
     to_delete = []
     for ref_doc_id, info in (index.ref_doc_info or {}).items():
@@ -128,6 +128,25 @@ def _purge_same_file(index: VectorStoreIndex, file_name: str) -> None:
             to_delete.append(ref_doc_id)
     for ref_doc_id in to_delete:
         index.delete_ref_doc(ref_doc_id, delete_from_docstore=True)
+    return len(to_delete)
+
+
+def remove_from_index(file_name: str) -> int:
+    """Remove all RAG chunks for a document and persist. Returns how many refs deleted."""
+    if not (PERSIST_DIR / "docstore.json").exists():
+        return 0
+
+    storage = StorageContext.from_defaults(persist_dir=str(PERSIST_DIR))
+    index = load_index_from_storage(storage)
+    removed = _purge_same_file(index, file_name)
+    index.storage_context.persist(persist_dir=str(PERSIST_DIR))
+    try:
+        from rag import invalidate_index
+
+        invalidate_index()
+    except Exception:
+        pass
+    return removed
 
 
 def ingest(file_path: str | Path) -> None:

@@ -9,7 +9,7 @@ from fastapi import FastAPI, File, HTTPException, UploadFile
 from fastapi.responses import FileResponse, PlainTextResponse
 from pydantic import BaseModel, Field
 
-from ingest import ingest
+from ingest import ingest, remove_from_index
 from rag import ask, invalidate_index
 
 ROOT = Path(__file__).resolve().parent.parent
@@ -192,8 +192,10 @@ def delete_file(name: str):
     path = _safe_path(name)
     if not path.is_file():
         raise HTTPException(404, "File not found")
+    removed = remove_from_index(path.name)
     path.unlink()
-    return {"ok": True, "name": path.name}
+    invalidate_index()
+    return {"ok": True, "name": path.name, "chunks_removed": removed}
 
 
 @app.get("/api/transcripts", response_model=list[TranscriptInfo])
