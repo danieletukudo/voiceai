@@ -5,10 +5,11 @@ from datetime import datetime, timezone
 from pathlib import Path
 
 from dotenv import load_dotenv
-from fastapi import FastAPI, File, HTTPException, UploadFile
+from fastapi import FastAPI, File, Form, HTTPException, UploadFile
 from fastapi.responses import FileResponse, PlainTextResponse
 from pydantic import BaseModel, Field
 
+from business_ingest import ingest_business_sources, normalize_source_urls
 from ingest import ingest, remove_from_index
 from rag import ask, invalidate_index
 
@@ -85,6 +86,15 @@ class TranscriptDetail(TranscriptInfo):
     content: str
 
 
+class BusinessIngestResponse(BaseModel):
+    ok: bool = True
+    name: str | None = None
+    profile_file: str | None = None
+    ingested: list[str] = Field(default_factory=list)
+    warnings: list[str] = Field(default_factory=list)
+    sources: dict = Field(default_factory=dict)
+
+
 def _safe_path(name: str) -> Path:
     path = (DOCS / Path(name).name).resolve()
     if path.parent != DOCS.resolve():
@@ -142,6 +152,48 @@ def list_files():
         for f in sorted(DOCS.iterdir(), key=lambda p: p.stat().st_mtime, reverse=True)
         if f.is_file() and not f.name.startswith(".")
     ]
+
+
+@app.post("/api/business", response_model=BusinessIngestResponse)
+async def ingest_business(
+    maps_url: str | None = Form(None),
+    website_url: str | None = Form(None),
+    file: UploadFile | None = File(None),
+):
+    """Ingest Maps text, website text, and/or an uploaded document into RAG.
+
+    Maps-only, website-only, both, or either plus a document are all valid.
+    Maps and website text are embedded directly (no profile file is written).
+    """
+    maps_url, website_url = normalize_source_urls(maps_url, website_url)
+    extra_paths: list[Path] = []
+    if file is not None and file.filename:
+        path = _safe_path(file.filename)
+        data = await file.read()
+        if not data:
+            raise HTTPException(400, "Uploaded document is empty")
+        path.write_bytes(data)
+        extra_paths.append(path)
+
+    if not maps_url and not website_url and not extra_paths:
+        raise HTTPException(
+            400,
+            "Provide a Google Maps URL, a website URL, a document, or any combination",
+        )
+
+    try:
+        result = ingest_business_sources(
+            maps_url=maps_url,
+            website_url=website_url,
+            extra_files=extra_paths,
+            docs_dir=DOCS,
+        )
+    except ValueError as exc:
+        raise HTTPException(400, str(exc)) from exc
+    except Exception as exc:
+        raise HTTPException(500, f"Business ingest failed: {exc}") from exc
+    invalidate_index()
+    return BusinessIngestResponse(**result)
 
 
 @app.post("/api/files")

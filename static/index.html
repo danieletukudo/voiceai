@@ -115,7 +115,69 @@
       color: var(--muted);
       font-size: 1.02rem;
       line-height: 1.55;
-      max-width: 38ch;
+      max-width: 42ch;
+    }
+
+    .form {
+      padding: 1.15rem 1.15rem 1.3rem;
+      display: grid;
+      gap: 0.9rem;
+    }
+
+    .field {
+      display: grid;
+      gap: 0.35rem;
+    }
+
+    .field label,
+    .field .field-label {
+      font-size: 0.82rem;
+      font-weight: 600;
+      color: var(--ink);
+    }
+
+    .field .hint {
+      color: var(--muted);
+      font-weight: 500;
+      font-size: 0.78rem;
+    }
+
+    .field input[type="url"],
+    .field input[type="text"] {
+      width: 100%;
+      border: 1px solid var(--line);
+      border-radius: 12px;
+      padding: 0.7rem 0.85rem;
+      font: inherit;
+      color: var(--ink);
+      background: #fff;
+      outline: none;
+      transition: border-color 0.15s ease, box-shadow 0.15s ease;
+    }
+
+    .field input[type="url"]:focus,
+    .field input[type="text"]:focus {
+      border-color: var(--green);
+      box-shadow: 0 0 0 3px var(--green-glow);
+    }
+
+    .primary {
+      appearance: none;
+      border: 0;
+      background: linear-gradient(145deg, var(--green), var(--green-deep));
+      color: #fff;
+      font: inherit;
+      font-weight: 650;
+      font-size: 0.92rem;
+      padding: 0.75rem 1.1rem;
+      border-radius: 999px;
+      cursor: pointer;
+      box-shadow: 0 10px 22px var(--green-glow);
+    }
+
+    .primary:disabled {
+      opacity: 0.6;
+      cursor: wait;
     }
 
     .panel {
@@ -135,8 +197,10 @@
       padding: 2.1rem 1.4rem;
       text-align: center;
       cursor: pointer;
-      transition: background 0.2s ease, border-color 0.2s ease;
-      border-bottom: 1px solid var(--line);
+      transition: background 0.2s ease, border-color 0.2s ease, box-shadow 0.2s ease;
+      border: 1px dashed var(--line);
+      border-radius: 16px;
+      background: #fcfefd;
       outline: none;
     }
 
@@ -146,8 +210,10 @@
       background: var(--green-soft);
     }
 
-    .drop.is-drag {
-      box-shadow: inset 0 0 0 2px var(--green);
+    .drop.has-file {
+      background: var(--green-soft);
+      border-style: solid;
+      border-color: #bfe5cd;
     }
 
     .drop-icon {
@@ -422,22 +488,43 @@
         <div class="brand-kicker">Knowledge base</div>
       </div>
       <h1>Remoting.work Customer Call Agent</h1>
-      <p class="lede">Add documents for the agent to learn from. Upload to ingest, or remove files you no longer need.</p>
+      <p class="lede">Add a Google Maps listing, a website, a document, or any mix of those. The agent learns from whatever you provide.</p>
     </header>
 
-    <section class="panel" aria-label="Document manager">
-      <label class="drop" id="drop" tabindex="0">
-        <div class="drop-icon" aria-hidden="true">
-          <svg width="22" height="22" viewBox="0 0 24 24" fill="none">
-            <path d="M12 16V4m0 0 4 4m-4-4-4 4" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
-            <path d="M4 16.5V18a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2v-1.5" stroke="currentColor" stroke-width="2" stroke-linecap="round"/>
-          </svg>
+    <section class="panel" aria-label="Business profile">
+      <div class="toolbar">
+        <h3>Business profile </h3>
+        <p class="status" id="biz-msg" role="status" aria-live="polite"></p>
+      </div>
+      <form class="form" id="biz-form" novalidate>
+        <div class="field">
+          <label for="maps-url">Google Maps profile <span class="hint">(optional)</span></label>
+          <input id="maps-url" name="maps_url" type="text" placeholder="https://www.google.com/maps/place/..." autocomplete="off" />
         </div>
-        <h2>Drop a document here</h2>
-        <p>or <strong>browse files</strong> · PDF, CSV, TXT and more</p>
-        <input id="file" type="file" name="file" />
-      </label>
+        <div class="field">
+          <label for="website-url">Website <span class="hint">(optional)</span></label>
+          <input id="website-url" name="website_url" type="text" placeholder="https://theboroughlagos.com/" autocomplete="off" />
+        </div>
+        <div class="field">
+          <span class="field-label">Document <span class="hint">(optional)</span></span>
+          <label class="drop" id="drop" tabindex="0">
+            <div class="drop-icon" aria-hidden="true">
+              <svg width="22" height="22" viewBox="0 0 24 24" fill="none">
+                <path d="M12 16V4m0 0 4 4m-4-4-4 4" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
+                <path d="M4 16.5V18a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2v-1.5" stroke="currentColor" stroke-width="2" stroke-linecap="round"/>
+              </svg>
+            </div>
+            <h2 id="drop-title">Drop a document here</h2>
+            <p id="drop-hint">or <strong>browse files</strong> · PDF, CSV, TXT and more</p>
+            <input id="biz-file" type="file" name="file" />
+          </label>
+        </div>
+        <button class="primary" id="biz-submit" type="submit">Ingest into knowledge base</button>
+        <p class="hint" style="margin:0;color:var(--muted);font-size:0.82rem;">Maps and website text go straight to the agent. Uploaded files are ingested the same way and also listed in the library.</p>
+      </form>
+    </section>
 
+    <section class="panel section-gap" aria-label="Document library">
       <div class="toolbar">
         <h3>Library <span class="count" id="count">0</span></h3>
         <p class="status" id="msg" role="status" aria-live="polite"></p>
@@ -468,11 +555,18 @@
   </main>
 
   <script>
+    const bizForm = document.getElementById("biz-form");
+    const bizMsg = document.getElementById("biz-msg");
+    const bizSubmit = document.getElementById("biz-submit");
+    const mapsUrl = document.getElementById("maps-url");
+    const websiteUrl = document.getElementById("website-url");
+    const bizFile = document.getElementById("biz-file");
     const msg = document.getElementById("msg");
     const list = document.getElementById("list");
     const count = document.getElementById("count");
     const drop = document.getElementById("drop");
-    const fileInput = document.getElementById("file");
+    const dropTitle = document.getElementById("drop-title");
+    const dropHint = document.getElementById("drop-hint");
     const txMsg = document.getElementById("tx-msg");
     const txList = document.getElementById("tx-list");
     const txCount = document.getElementById("tx-count");
@@ -525,7 +619,7 @@
         count.textContent = String(files.length);
 
         if (!files.length) {
-          list.innerHTML = `<li class="empty">No documents yet<span>Upload your first file to get started</span></li>`;
+          list.innerHTML = `<li class="empty">No documents yet<span>Drop a file above, then ingest</span></li>`;
           return;
         }
 
@@ -600,22 +694,70 @@
       setStatus(txMsg, "Loaded.", "ok");
     }
 
-    async function upload(file) {
-      if (!file) return;
-      setStatus(msg, "Uploading and ingesting…", "busy");
-      const fd = new FormData();
-      fd.append("file", file);
-      const r = await fetch("/api/files", { method: "POST", body: fd });
-      if (r.ok) {
-        setStatus(msg, "Ingested successfully.", "ok");
+    function syncDropCopy() {
+      const file = bizFile.files && bizFile.files[0];
+      if (file) {
+        dropTitle.textContent = file.name;
+        dropHint.innerHTML = "Selected · " + formatSize(file.size) + " · click to change";
+        drop.classList.add("has-file");
       } else {
-        setStatus(msg, "Upload failed: " + await r.text(), "err");
+        dropTitle.textContent = "Drop a document here";
+        dropHint.innerHTML = "or <strong>browse files</strong> · PDF, CSV, TXT and more";
+        drop.classList.remove("has-file");
       }
-      fileInput.value = "";
-      refresh();
     }
 
-    fileInput.addEventListener("change", () => upload(fileInput.files[0]));
+    function assignDroppedFile(file) {
+      if (!file) return;
+      const dt = new DataTransfer();
+      dt.items.add(file);
+      bizFile.files = dt.files;
+      syncDropCopy();
+    }
+
+    async function ingestBusiness(event) {
+      event.preventDefault();
+      const maps = (mapsUrl.value || "").trim();
+      const website = (websiteUrl.value || "").trim();
+      const file = bizFile.files && bizFile.files[0];
+      if (!maps && !website && !file) {
+        setStatus(bizMsg, "Add a Maps URL, a website, or a document.", "err");
+        return;
+      }
+
+      const fd = new FormData();
+      if (maps) fd.append("maps_url", maps);
+      if (website) fd.append("website_url", website);
+      if (file) fd.append("file", file);
+
+      bizSubmit.disabled = true;
+      setStatus(bizMsg, "Reading sources and ingesting… this can take a minute.", "busy");
+      try {
+        const r = await fetch("/api/business", { method: "POST", body: fd });
+        const text = await r.text();
+        let data = null;
+        try { data = JSON.parse(text); } catch {}
+        if (!r.ok) {
+          const detail = (data && (data.detail || data.message)) || text;
+          throw new Error(typeof detail === "string" ? detail : JSON.stringify(detail));
+        }
+        const names = (data && data.ingested) || [];
+        const warn = (data && data.warnings && data.warnings.length)
+          ? " Warning: " + data.warnings.join(" ")
+          : "";
+        setStatus(bizMsg, "Ingested " + (names.join(", ") || "successfully") + "." + warn, data && data.warnings && data.warnings.length ? "err" : "ok");
+        bizForm.reset();
+        syncDropCopy();
+        refresh();
+      } catch (err) {
+        setStatus(bizMsg, "Ingest failed: " + (err.message || err), "err");
+      } finally {
+        bizSubmit.disabled = false;
+      }
+    }
+
+    bizForm.addEventListener("submit", ingestBusiness);
+    bizFile.addEventListener("change", syncDropCopy);
 
     ["dragenter", "dragover"].forEach((evt) => {
       drop.addEventListener(evt, (e) => {
@@ -632,8 +774,7 @@
     });
 
     drop.addEventListener("drop", (e) => {
-      const file = e.dataTransfer.files[0];
-      upload(file);
+      assignDroppedFile(e.dataTransfer.files[0]);
     });
 
     list.addEventListener("click", async (e) => {

@@ -149,14 +149,16 @@ def remove_from_index(file_name: str) -> int:
     return removed
 
 
-def ingest(file_path: str | Path) -> None:
-    """Read one file (PDF, CSV, TXT, …) and add it to the vector store."""
-    path = Path(file_path).resolve()
-    if not path.is_file():
-        raise FileNotFoundError(f"File not found: {path}")
+def _insert_documents(documents: list) -> None:
+    """Add documents to the vector store in one persist (replacing same names)."""
+    if not documents:
+        return
 
-    documents = SimpleDirectoryReader(input_files=[str(path)]).load_data()
-    documents = _ensure_text_documents(path, documents)
+    names = {
+        (doc.metadata or {}).get("file_name") or (doc.metadata or {}).get("filename")
+        for doc in documents
+    }
+    names.discard(None)
 
     PERSIST_DIR.mkdir(parents=True, exist_ok=True)
     has_index = (PERSIST_DIR / "docstore.json").exists()
@@ -164,7 +166,8 @@ def ingest(file_path: str | Path) -> None:
     if has_index:
         storage = StorageContext.from_defaults(persist_dir=str(PERSIST_DIR))
         index = load_index_from_storage(storage)
-        _purge_same_file(index, path.name)
+        for name in names:
+            _purge_same_file(index, name)
         for doc in documents:
             index.insert(doc)
     else:
@@ -177,7 +180,45 @@ def ingest(file_path: str | Path) -> None:
         invalidate_index()
     except Exception:
         pass
-    print(f"Ingested {path.name} -> {PERSIST_DIR} ({len(_combined_text(documents))} chars)")
+    print(
+        f"Ingested {sorted(names) or ['(unnamed)']} -> {PERSIST_DIR} "
+        f"({len(_combined_text(documents))} chars)"
+    )
+
+
+def load_file_documents(file_path: str | Path) -> list:
+    """Read a file (PDF, CSV, TXT, …) into LlamaIndex documents."""
+    path = Path(file_path).resolve()
+    if not path.is_file():
+        raise FileNotFoundError(f"File not found: {path}")
+    documents = SimpleDirectoryReader(input_files=[str(path)]).load_data()
+    return _ensure_text_documents(path, documents)
+
+
+def ingest_text(
+    text: str,
+    *,
+    name: str,
+    extra_metadata: dict | None = None,
+) -> None:
+    """Embed raw text into the vector store. Does not write a knowledge file."""
+    body = (text or "").strip()
+    if not body:
+        raise ValueError(f"Empty text for {name}")
+    meta = {"file_name": name, "filename": name}
+    if extra_metadata:
+        meta.update(extra_metadata)
+    _insert_documents([Document(text=body, metadata=meta)])
+
+
+def ingest_documents(documents: list) -> None:
+    """Embed already-built documents in one batch."""
+    _insert_documents(documents)
+
+
+def ingest(file_path: str | Path) -> None:
+    """Read one file (PDF, CSV, TXT, …) and add it to the vector store."""
+    _insert_documents(load_file_documents(file_path))
 
 
 if __name__ == "__main__":
