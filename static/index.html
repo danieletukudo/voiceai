@@ -745,7 +745,11 @@
         const warn = (data && data.warnings && data.warnings.length)
           ? " Warning: " + data.warnings.join(" ")
           : "";
-        setStatus(bizMsg, "Ingested " + (names.join(", ") || "successfully") + "." + warn, data && data.warnings && data.warnings.length ? "err" : "ok");
+        const pack = data && data.pack;
+        const packNote = pack && pack.faqs
+          ? " Ready with " + pack.faqs + " instant FAQs for " + (pack.name || "this source") + "."
+          : "";
+        setStatus(bizMsg, "Ingested " + (names.join(", ") || "successfully") + "." + packNote + warn, data && data.warnings && data.warnings.length ? "err" : "ok");
         bizForm.reset();
         syncDropCopy();
         refresh();

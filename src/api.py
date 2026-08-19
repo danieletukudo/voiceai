@@ -10,6 +10,7 @@ from fastapi.responses import FileResponse, PlainTextResponse
 from pydantic import BaseModel, Field
 
 from business_ingest import ingest_business_sources, normalize_source_urls
+from company_pack import drop_corpus_entry, rebuild_from_docs_dir
 from ingest import ingest, remove_from_index
 from rag import ask, invalidate_index
 
@@ -71,9 +72,20 @@ class AskRequest(BaseModel):
     company_id: str | None = None
 
 
+class BusinessIngestResponse(BaseModel):
+    ok: bool = True
+    name: str | None = None
+    profile_file: str | None = None
+    ingested: list[str] = Field(default_factory=list)
+    warnings: list[str] = Field(default_factory=list)
+    sources: dict = Field(default_factory=dict)
+    pack: dict | None = None
+
+
 class AskResponse(BaseModel):
     answer: str
     sources: list[dict] = Field(default_factory=list)
+    via: str = "pack"
 
 
 class TranscriptInfo(BaseModel):
@@ -84,15 +96,6 @@ class TranscriptInfo(BaseModel):
 
 class TranscriptDetail(TranscriptInfo):
     content: str
-
-
-class BusinessIngestResponse(BaseModel):
-    ok: bool = True
-    name: str | None = None
-    profile_file: str | None = None
-    ingested: list[str] = Field(default_factory=list)
-    warnings: list[str] = Field(default_factory=list)
-    sources: dict = Field(default_factory=dict)
 
 
 def _safe_path(name: str) -> Path:
@@ -204,10 +207,19 @@ async def upload_file(file: UploadFile = File(...)):
     path.write_bytes(await file.read())
     try:
         ingest(path)
+        pack = rebuild_from_docs_dir(DOCS)
     except Exception as exc:
         raise HTTPException(500, f"Ingest failed: {exc}") from exc
     invalidate_index()
-    return {"ok": True, "name": path.name}
+    return {
+        "ok": True,
+        "name": path.name,
+        "pack": {
+            "name": pack.get("name"),
+            "kind": pack.get("kind"),
+            "faqs": len(pack.get("faqs") or []),
+        },
+    }
 
 
 @app.get("/api/files/{name}")
@@ -246,6 +258,10 @@ def delete_file(name: str):
         raise HTTPException(404, "File not found")
     removed = remove_from_index(path.name)
     path.unlink()
+    try:
+        drop_corpus_entry(path.name)
+    except Exception:
+        pass
     invalidate_index()
     return {"ok": True, "name": path.name, "chunks_removed": removed}
 

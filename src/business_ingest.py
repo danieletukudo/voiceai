@@ -147,9 +147,27 @@ def ingest_business_sources(
         )
 
     ingest_documents(documents)
+    pack_info = None
+    try:
+        from company_pack import upsert_corpus_and_rebuild
+
+        entries = []
+        for doc in documents:
+            meta = doc.metadata or {}
+            label = meta.get("file_name") or meta.get("filename") or "source"
+            entries.append((str(label), doc.text or ""))
+        pack = upsert_corpus_and_rebuild(entries)
+        pack_info = {
+            "name": pack.get("name"),
+            "kind": pack.get("kind"),
+            "faqs": len(pack.get("faqs") or []),
+        }
+    except Exception as exc:
+        warnings.append(f"Company pack could not be built: {exc}")
+
     return {
         "ok": True,
-        "name": name,
+        "name": name or (pack_info or {}).get("name"),
         "profile_file": None,
         "ingested": ingested,
         "warnings": warnings,
@@ -157,4 +175,5 @@ def ingest_business_sources(
             "maps": (maps_profile or {}).get("source_url") or maps_url,
             "website": (website_profile or {}).get("source_url") or website_url,
         },
+        "pack": pack_info,
     }
