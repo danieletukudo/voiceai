@@ -1,0 +1,17 @@
+.venv/
+venv/
+env/
+.env
+.env.local
+.env.*
+!.env.example
+.idea/
+.DS_Store
+__pycache__/
+*.py[cod]
+*.egg-info/
+.pytest_cache/
+.mypy_cache/
+chat-engine-storage/
+
+
