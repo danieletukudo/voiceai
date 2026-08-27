@@ -6,7 +6,7 @@ from pathlib import Path
 
 from dotenv import load_dotenv
 from fastapi import FastAPI, File, Form, HTTPException, UploadFile
-from fastapi.responses import FileResponse
+from fastapi.responses import FileResponse, PlainTextResponse
 from pydantic import BaseModel, Field
 
 from business_ingest import ingest_business_sources, normalize_source_urls
@@ -20,10 +20,25 @@ STATIC = ROOT / "static"
 DOCS.mkdir(parents=True, exist_ok=True)
 STATIC.mkdir(parents=True, exist_ok=True)
 
+TRANSCRIPTS = Path(
+    os.getenv("TRANSCRIPTS_DIR", str(ROOT / "transcripts"))
+).expanduser().resolve()
+TRANSCRIPTS.mkdir(parents=True, exist_ok=True)
+
 API_HOST = os.getenv("API_HOST", "0.0.0.0")
 API_PORT = int(os.getenv("PORT") or os.getenv("API_PORT", "8000"))
 
 app = FastAPI(title="Knowledge API")
+
+
+class TranscriptInfo(BaseModel):
+    name: str
+    size: int
+    modified: str
+
+
+class TranscriptDetail(TranscriptInfo):
+    content: str
 
 
 class BusinessIngestResponse(BaseModel):
@@ -39,6 +54,13 @@ class BusinessIngestResponse(BaseModel):
 def _safe_path(name: str) -> Path:
     path = (DOCS / Path(name).name).resolve()
     if path.parent != DOCS.resolve():
+        raise HTTPException(400, "Invalid filename")
+    return path
+
+
+def _safe_transcript_path(name: str) -> Path:
+    path = (TRANSCRIPTS / Path(name).name).resolve()
+    if path.parent != TRANSCRIPTS.resolve():
         raise HTTPException(400, "Invalid filename")
     return path
 
@@ -170,6 +192,76 @@ def delete_file(name: str):
     removed = remove_from_index(path.name)
     path.unlink()
     return {"ok": True, "name": path.name, "chunks_removed": removed}
+
+
+@app.get("/api/transcripts", response_model=list[TranscriptInfo])
+def list_transcripts():
+    if not TRANSCRIPTS.is_dir():
+        return []
+    files = [
+        f
+        for f in TRANSCRIPTS.iterdir()
+        if f.is_file() and not f.name.startswith(".") and f.suffix.lower() == ".txt"
+    ]
+    files.sort(key=lambda p: p.stat().st_mtime, reverse=True)
+    return [
+        TranscriptInfo(name=f.name, size=f.stat().st_size, modified=_iso_mtime(f))
+        for f in files
+    ]
+
+
+@app.post("/api/transcripts")
+async def upload_transcript(file: UploadFile = File(...)):
+    if not file.filename:
+        raise HTTPException(400, "No filename")
+    filename = Path(file.filename).name
+    if not filename.lower().endswith(".txt"):
+        filename = f"{filename}.txt"
+    path = _safe_transcript_path(filename)
+    data = await file.read()
+    if not data:
+        raise HTTPException(400, "Empty transcript")
+    path.write_bytes(data)
+    return {
+        "ok": True,
+        "name": path.name,
+        "size": path.stat().st_size,
+        "modified": _iso_mtime(path),
+    }
+
+
+@app.get("/api/transcripts/{name}", response_model=TranscriptDetail)
+def get_transcript(name: str):
+    path = _safe_transcript_path(name)
+    if not path.is_file():
+        raise HTTPException(404, "Transcript not found")
+    return TranscriptDetail(
+        name=path.name,
+        size=path.stat().st_size,
+        modified=_iso_mtime(path),
+        content=path.read_text(encoding="utf-8"),
+    )
+
+
+@app.get("/api/transcripts/{name}/download")
+def download_transcript(name: str):
+    path = _safe_transcript_path(name)
+    if not path.is_file():
+        raise HTTPException(404, "Transcript not found")
+    return FileResponse(
+        path,
+        media_type="text/plain; charset=utf-8",
+        filename=path.name,
+        content_disposition_type="attachment",
+    )
+
+
+@app.get("/api/transcripts/{name}/raw", response_class=PlainTextResponse)
+def raw_transcript(name: str):
+    path = _safe_transcript_path(name)
+    if not path.is_file():
+        raise HTTPException(404, "Transcript not found")
+    return path.read_text(encoding="utf-8")
 
 
 if __name__ == "__main__":

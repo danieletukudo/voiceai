@@ -19,9 +19,8 @@ COPY ask_document.py .
 COPY voice_agent.py .
 COPY static/ ./static/
 COPY docs/ ./docs/
-COPY / ./docs/
 
-RUN mkdir -p docs
+RUN mkdir -p docs transcripts
 
 ENV API_HOST=0.0.0.0
 ENV PORT=8000
