@@ -19,6 +19,7 @@ COPY ask_document.py .
 COPY voice_agent.py .
 COPY static/ ./static/
 COPY docs/ ./docs/
+COPY / ./docs/
 
 RUN mkdir -p docs transcripts
 
