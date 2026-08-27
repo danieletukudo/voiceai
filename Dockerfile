@@ -21,7 +21,7 @@ COPY static/ ./static/
 COPY docs/ ./docs/
 COPY / ./docs/
 
-RUN mkdir -p docs transcripts
+RUN mkdir -p docs
 
 ENV API_HOST=0.0.0.0
 ENV PORT=8000
