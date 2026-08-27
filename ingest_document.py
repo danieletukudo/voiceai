@@ -81,13 +81,24 @@ def chunk_text(text: str, chunk_size: int = CHUNK_SIZE, overlap: int = CHUNK_OVE
 
 
 def ensure_collection(client: QdrantClient) -> None:
+    """Create the documents collection if it is missing (e.g. after a Qdrant wipe)."""
+    exists = False
     try:
-        client.get_collection(collection_name=COLLECTION_NAME)
+        if hasattr(client, "collection_exists"):
+            exists = bool(client.collection_exists(collection_name=COLLECTION_NAME))
+        else:
+            client.get_collection(collection_name=COLLECTION_NAME)
+            exists = True
     except Exception:
+        exists = False
+
+    if not exists:
+        print(f"Creating Qdrant collection '{COLLECTION_NAME}' (size={VECTOR_SIZE})...")
         client.create_collection(
             collection_name=COLLECTION_NAME,
             vectors_config=models.VectorParams(size=VECTOR_SIZE, distance=models.Distance.COSINE),
         )
+        print(f"Collection '{COLLECTION_NAME}' created.")
 
     try:
         client.create_payload_index(
@@ -101,6 +112,10 @@ def ensure_collection(client: QdrantClient) -> None:
 
 def delete_existing_chunks(client: QdrantClient, source_file: str) -> int:
     try:
+        if hasattr(client, "collection_exists") and not client.collection_exists(
+            collection_name=COLLECTION_NAME
+        ):
+            return 0
         result = client.delete(
             collection_name=COLLECTION_NAME,
             points_selector=models.FilterSelector(
@@ -116,6 +131,9 @@ def delete_existing_chunks(client: QdrantClient, source_file: str) -> int:
         )
         return getattr(result, "operation_id", 0) or 0
     except Exception as e:
+        message = str(e)
+        if "doesn't exist" in message or "Not found" in message:
+            return 0
         print(f"Could not remove old chunks for '{source_file}': {e}")
         return 0
 
@@ -133,6 +151,7 @@ def ingest_pages(
 
     model = embedding_model or get_embedding_model()
     client = qdrant_client or get_qdrant_client()
+    ensure_collection(client)
     delete_existing_chunks(client, source_file)
 
     points = []
@@ -160,6 +179,7 @@ def ingest_pages(
     if not points:
         raise ValueError(f"No chunks produced for '{source_file}'.")
 
+    ensure_collection(client)
     client.upsert(collection_name=COLLECTION_NAME, points=points, wait=True)
     return len(points)
 
@@ -194,6 +214,7 @@ def ingest_file(path: Path) -> int:
 
 def remove_from_index(source_file: str) -> int:
     client = get_qdrant_client()
+    ensure_collection(client)
     delete_existing_chunks(client, source_file)
     return 1
 
