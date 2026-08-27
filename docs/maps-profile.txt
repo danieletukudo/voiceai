@@ -1,0 +1,19 @@
+Illusions Zone
+==============
+Category: Amusement center
+Area: Eti-Osa
+Address: Illusions Zone, Garnet plaza, Lekki - Epe Expy, Eti-Osa, Lekki 106104, Lagos
+Plus code: CGQC+64
+Phone: 0707 724 6854
+Status: Closed · Opens 10 am
+Timezone: Africa/Lagos
+Rating: 4.7
+Coordinates: 6.4380302, 3.5203609
+Hours:
+  Thursday: 10 am–5 pm
+About:
+  Illusion Zone is an immersive illusion experience in Lagos featuring mind-bending optical illusions, mirrored rooms, perspective tricks, and interactive installations. Explore at your own pace, take photos and videos, and experience a stunning jellyfish light finale designed to challenge how you see reality.
+Other links:
+  link: https://streetviewpixels-pa.googleapis.com/v1/thumbnail?panoid=BTJY3kJnClJWlxrFo3cFIA&cb_client=search.gws-prod.gps&w=211&h=120&yaw=177.07903&pitch=0&thumbfov=100
+Sources:
+  maps: https://www.google.com/maps/place/Illusions+Zone/@6.4380302,3.517786,17z/data=!3m1!4b1!4m6!3m5!1s0x103bf7a7c67bfc45:0xf543ba42730a2033!8m2!3d6.4380302!4d3.5203609!16s%2Fg%2F11yy30c7dg

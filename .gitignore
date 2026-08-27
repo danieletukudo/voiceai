@@ -1,0 +1,15 @@
+.env
+.env.local
+.venv/
+venv/
+__pycache__/
+*.py[cod]
+*.egg-info/
+.DS_Store
+.idea/
+.vscode/
+chat-engine-storage/
+transcripts/*
+!transcripts/.gitkeep
+*.zip
+*.log

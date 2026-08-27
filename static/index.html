@@ -1,0 +1,809 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <title>Remoting Customer Call Agent</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com" />
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+  <link href="https://fonts.googleapis.com/css2?family=Figtree:wght@400;500;600;700&family=Sora:wght@500;600;700&display=swap" rel="stylesheet" />
+  <style>
+    :root {
+      --bg: #ffffff;
+      --bg-soft: #f4faf6;
+      --ink: #10231a;
+      --muted: #5b7166;
+      --line: #d7e8de;
+      --green: #0d8a4a;
+      --green-deep: #086b38;
+      --green-soft: #e8f7ee;
+      --green-glow: rgba(13, 138, 74, 0.14);
+      --danger: #c23b3b;
+      --danger-soft: #fdeeee;
+      --radius: 18px;
+      --shadow: 0 18px 50px rgba(16, 35, 26, 0.06);
+      --font: "Figtree", sans-serif;
+      --display: "Sora", sans-serif;
+    }
+
+    * { box-sizing: border-box; }
+
+    html, body {
+      margin: 0;
+      min-height: 100%;
+      background: var(--bg);
+      color: var(--ink);
+      font-family: var(--font);
+    }
+
+    body {
+      background:
+        radial-gradient(900px 420px at 12% -10%, rgba(13, 138, 74, 0.12), transparent 60%),
+        radial-gradient(700px 380px at 100% 0%, rgba(13, 138, 74, 0.08), transparent 55%),
+        linear-gradient(180deg, #ffffff 0%, #f7fcf9 100%);
+      background-attachment: fixed;
+    }
+
+    .shell {
+      width: min(720px, calc(100% - 2rem));
+      margin: 0 auto;
+      padding: 2.5rem 0 4rem;
+      animation: rise 0.55s ease both;
+    }
+
+    @keyframes rise {
+      from { opacity: 0; transform: translateY(12px); }
+      to { opacity: 1; transform: translateY(0); }
+    }
+
+    @keyframes fadeIn {
+      from { opacity: 0; transform: translateY(6px); }
+      to { opacity: 1; transform: translateY(0); }
+    }
+
+    header {
+      margin-bottom: 2rem;
+    }
+
+    .brand-mark {
+      display: inline-flex;
+      align-items: center;
+      gap: 0.65rem;
+      margin-bottom: 1.1rem;
+    }
+
+    .logo {
+      width: 2.15rem;
+      height: 2.15rem;
+      border-radius: 12px;
+      background: linear-gradient(145deg, var(--green), var(--green-deep));
+      box-shadow: 0 10px 24px var(--green-glow);
+      position: relative;
+    }
+
+    .logo::after {
+      content: "";
+      position: absolute;
+      inset: 7px;
+      border: 2px solid rgba(255, 255, 255, 0.85);
+      border-radius: 50%;
+      border-top-color: transparent;
+      border-left-color: transparent;
+      transform: rotate(-20deg);
+    }
+
+    .brand-kicker {
+      font-size: 0.78rem;
+      font-weight: 600;
+      letter-spacing: 0.08em;
+      text-transform: uppercase;
+      color: var(--green);
+    }
+
+    h1 {
+      margin: 0;
+      font-family: var(--display);
+      font-size: clamp(1.65rem, 4vw, 2.15rem);
+      font-weight: 700;
+      letter-spacing: -0.03em;
+      line-height: 1.15;
+      max-width: 14ch;
+    }
+
+    .lede {
+      margin: 0.75rem 0 0;
+      color: var(--muted);
+      font-size: 1.02rem;
+      line-height: 1.55;
+      max-width: 42ch;
+    }
+
+    .form {
+      padding: 1.15rem 1.15rem 1.3rem;
+      display: grid;
+      gap: 0.9rem;
+    }
+
+    .field {
+      display: grid;
+      gap: 0.35rem;
+    }
+
+    .field label,
+    .field .field-label {
+      font-size: 0.82rem;
+      font-weight: 600;
+      color: var(--ink);
+    }
+
+    .field .hint {
+      color: var(--muted);
+      font-weight: 500;
+      font-size: 0.78rem;
+    }
+
+    .field input[type="url"],
+    .field input[type="text"] {
+      width: 100%;
+      border: 1px solid var(--line);
+      border-radius: 12px;
+      padding: 0.7rem 0.85rem;
+      font: inherit;
+      color: var(--ink);
+      background: #fff;
+      outline: none;
+      transition: border-color 0.15s ease, box-shadow 0.15s ease;
+    }
+
+    .field input[type="url"]:focus,
+    .field input[type="text"]:focus {
+      border-color: var(--green);
+      box-shadow: 0 0 0 3px var(--green-glow);
+    }
+
+    .primary {
+      appearance: none;
+      border: 0;
+      background: linear-gradient(145deg, var(--green), var(--green-deep));
+      color: #fff;
+      font: inherit;
+      font-weight: 650;
+      font-size: 0.92rem;
+      padding: 0.75rem 1.1rem;
+      border-radius: 999px;
+      cursor: pointer;
+      box-shadow: 0 10px 22px var(--green-glow);
+    }
+
+    .primary:disabled {
+      opacity: 0.6;
+      cursor: wait;
+    }
+
+    .panel {
+      background: rgba(255, 255, 255, 0.88);
+      backdrop-filter: blur(10px);
+      border: 1px solid var(--line);
+      border-radius: calc(var(--radius) + 4px);
+      box-shadow: var(--shadow);
+      overflow: hidden;
+    }
+
+    .drop {
+      position: relative;
+      display: grid;
+      place-items: center;
+      gap: 0.85rem;
+      padding: 2.1rem 1.4rem;
+      text-align: center;
+      cursor: pointer;
+      transition: background 0.2s ease, border-color 0.2s ease, box-shadow 0.2s ease;
+      border: 1px dashed var(--line);
+      border-radius: 16px;
+      background: #fcfefd;
+      outline: none;
+    }
+
+    .drop:hover,
+    .drop:focus-visible,
+    .drop.is-drag {
+      background: var(--green-soft);
+    }
+
+    .drop.has-file {
+      background: var(--green-soft);
+      border-style: solid;
+      border-color: #bfe5cd;
+    }
+
+    .drop-icon {
+      width: 3.2rem;
+      height: 3.2rem;
+      border-radius: 999px;
+      display: grid;
+      place-items: center;
+      background: var(--bg-soft);
+      color: var(--green);
+      transition: transform 0.25s ease, background 0.2s ease;
+    }
+
+    .drop:hover .drop-icon,
+    .drop.is-drag .drop-icon {
+      transform: translateY(-2px) scale(1.04);
+      background: #fff;
+    }
+
+    .drop h2 {
+      margin: 0;
+      font-family: var(--display);
+      font-size: 1.05rem;
+      font-weight: 600;
+      letter-spacing: -0.02em;
+    }
+
+    .drop p {
+      margin: 0;
+      color: var(--muted);
+      font-size: 0.92rem;
+    }
+
+    .drop strong {
+      color: var(--green-deep);
+      font-weight: 600;
+    }
+
+    .drop input {
+      position: absolute;
+      inset: 0;
+      opacity: 0;
+      cursor: pointer;
+    }
+
+    .toolbar {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      gap: 1rem;
+      padding: 1rem 1.15rem;
+      border-bottom: 1px solid var(--line);
+      background: #fcfefd;
+    }
+
+    .toolbar h3 {
+      margin: 0;
+      font-family: var(--display);
+      font-size: 0.92rem;
+      font-weight: 600;
+    }
+
+    .count {
+      display: inline-flex;
+      align-items: center;
+      justify-content: center;
+      min-width: 1.6rem;
+      height: 1.6rem;
+      padding: 0 0.45rem;
+      margin-left: 0.4rem;
+      border-radius: 999px;
+      background: var(--green-soft);
+      color: var(--green-deep);
+      font-size: 0.78rem;
+      font-weight: 700;
+    }
+
+    .status {
+      min-height: 1.25rem;
+      font-size: 0.86rem;
+      color: var(--muted);
+      transition: color 0.2s ease;
+    }
+
+    .status.ok { color: var(--green-deep); }
+    .status.err { color: var(--danger); }
+    .status.busy { color: var(--ink); }
+
+    .list {
+      list-style: none;
+      margin: 0;
+      padding: 0.35rem 0;
+    }
+
+    .list li {
+      display: flex;
+      align-items: center;
+      gap: 0.85rem;
+      padding: 0.9rem 1.15rem;
+      animation: fadeIn 0.28s ease both;
+    }
+
+    .list li + li {
+      border-top: 1px solid #eef5f0;
+    }
+
+    .file-icon {
+      flex: 0 0 auto;
+      width: 2.4rem;
+      height: 2.4rem;
+      border-radius: 12px;
+      display: grid;
+      place-items: center;
+      background: var(--green-soft);
+      color: var(--green-deep);
+    }
+
+    .meta {
+      flex: 1;
+      min-width: 0;
+    }
+
+    .name {
+      display: block;
+      font-weight: 600;
+      font-size: 0.95rem;
+      white-space: nowrap;
+      overflow: hidden;
+      text-overflow: ellipsis;
+    }
+
+    .size {
+      display: block;
+      margin-top: 0.15rem;
+      color: var(--muted);
+      font-size: 0.8rem;
+    }
+
+    .delete {
+      appearance: none;
+      border: 1px solid transparent;
+      background: transparent;
+      color: var(--muted);
+      font: inherit;
+      font-size: 0.84rem;
+      font-weight: 600;
+      padding: 0.45rem 0.75rem;
+      border-radius: 999px;
+      cursor: pointer;
+      transition: background 0.15s ease, color 0.15s ease, border-color 0.15s ease;
+    }
+
+    .delete:hover,
+    .delete:focus-visible {
+      background: var(--danger-soft);
+      color: var(--danger);
+      border-color: #f3c7c7;
+      outline: none;
+    }
+
+    .empty {
+      padding: 2.2rem 1.2rem;
+      text-align: center;
+      color: var(--muted);
+      font-size: 0.95rem;
+    }
+
+    .empty span {
+      display: block;
+      margin-top: 0.35rem;
+      font-size: 0.84rem;
+      opacity: 0.85;
+    }
+
+    .section-gap {
+      margin-top: 1.5rem;
+    }
+
+    .actions {
+      display: flex;
+      flex-wrap: wrap;
+      gap: 0.35rem;
+      flex: 0 0 auto;
+    }
+
+    .btn {
+      appearance: none;
+      border: 1px solid transparent;
+      background: transparent;
+      color: var(--muted);
+      font: inherit;
+      font-size: 0.84rem;
+      font-weight: 600;
+      padding: 0.45rem 0.75rem;
+      border-radius: 999px;
+      cursor: pointer;
+      text-decoration: none;
+      transition: background 0.15s ease, color 0.15s ease, border-color 0.15s ease;
+    }
+
+    .btn:hover,
+    .btn:focus-visible {
+      background: var(--green-soft);
+      color: var(--green-deep);
+      border-color: #bfe5cd;
+      outline: none;
+    }
+
+    .viewer {
+      display: none;
+      border-top: 1px solid var(--line);
+      background: #fcfefd;
+      animation: fadeIn 0.28s ease both;
+    }
+
+    .viewer.is-open {
+      display: block;
+    }
+
+    .viewer-head {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      gap: 1rem;
+      padding: 0.9rem 1.15rem;
+      border-bottom: 1px solid var(--line);
+    }
+
+    .viewer-head h4 {
+      margin: 0;
+      font-family: var(--display);
+      font-size: 0.9rem;
+      font-weight: 600;
+      white-space: nowrap;
+      overflow: hidden;
+      text-overflow: ellipsis;
+    }
+
+    .viewer pre {
+      margin: 0;
+      padding: 1.1rem 1.15rem 1.4rem;
+      max-height: 28rem;
+      overflow: auto;
+      white-space: pre-wrap;
+      word-break: break-word;
+      font-family: ui-monospace, SFMono-Regular, Menlo, Consolas, monospace;
+      font-size: 0.82rem;
+      line-height: 1.55;
+      color: var(--ink);
+    }
+
+    footer {
+      margin-top: 1.25rem;
+      color: var(--muted);
+      font-size: 0.8rem;
+      text-align: center;
+    }
+
+    @media (max-width: 560px) {
+      .shell { padding-top: 1.6rem; }
+      .toolbar { flex-direction: column; align-items: flex-start; }
+      .list li { align-items: flex-start; }
+      .delete, .actions { margin-left: auto; }
+    }
+  </style>
+</head>
+<body>
+  <main class="shell">
+    <header>
+      <div class="brand-mark">
+        <div class="logo" aria-hidden="true"></div>
+        <div class="brand-kicker">Knowledge base</div>
+      </div>
+      <h1>Remoting.work Customer Call Agent</h1>
+      <p class="lede">Add a Google Business link, a website, a document — or any mix. Everything is embedded into Qdrant for the call agent.</p>
+    </header>
+
+    <section class="panel" aria-label="Document ingest">
+      <div class="toolbar">
+        <h3>Add knowledge</h3>
+        <p class="status" id="biz-msg" role="status" aria-live="polite"></p>
+      </div>
+      <form class="form" id="biz-form" novalidate>
+        <div class="field">
+          <label for="maps-url">Google Business / Maps URL <span class="hint">(optional)</span></label>
+          <input id="maps-url" name="maps_url" type="url" placeholder="https://maps.google.com/…" />
+        </div>
+        <div class="field">
+          <label for="website-url">Website URL <span class="hint">(optional)</span></label>
+          <input id="website-url" name="website_url" type="url" placeholder="https://yourbusiness.com" />
+        </div>
+        <div class="field">
+          <span class="field-label">Document <span class="hint">(optional)</span></span>
+          <label class="drop" id="drop" tabindex="0">
+            <div class="drop-icon" aria-hidden="true">
+              <svg width="22" height="22" viewBox="0 0 24 24" fill="none">
+                <path d="M12 16V4m0 0 4 4m-4-4-4 4" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
+                <path d="M4 16.5V18a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2v-1.5" stroke="currentColor" stroke-width="2" stroke-linecap="round"/>
+              </svg>
+            </div>
+            <h2 id="drop-title">Drop a document here</h2>
+            <p id="drop-hint">or <strong>browse files</strong> · PDF, TXT, MD, CSV</p>
+            <input id="biz-file" type="file" name="file" accept=".pdf,.txt,.md,.csv,.json,.log,application/pdf,text/plain" />
+          </label>
+        </div>
+        <button class="primary" id="biz-submit" type="submit">Ingest into knowledge base</button>
+        <p class="hint" style="margin:0;color:var(--muted);font-size:0.82rem;">Provide at least one source. Content is chunked, embedded, and stored in Qdrant.</p>
+      </form>
+    </section>
+
+    <section class="panel section-gap" aria-label="Document library">
+      <div class="toolbar">
+        <h3>Library <span class="count" id="count">0</span></h3>
+        <p class="status" id="msg" role="status" aria-live="polite"></p>
+      </div>
+
+      <ul class="list" id="list"></ul>
+    </section>
+
+    <section class="panel section-gap" aria-label="Call transcripts">
+      <div class="toolbar">
+        <h3>Call transcripts <span class="count" id="tx-count">0</span></h3>
+        <p class="status" id="tx-msg" role="status" aria-live="polite"></p>
+      </div>
+      <ul class="list" id="tx-list"></ul>
+      <div class="viewer" id="tx-viewer" aria-live="polite">
+        <div class="viewer-head">
+          <h4 id="tx-title">Transcript</h4>
+          <div class="actions">
+            <a class="btn" id="tx-download" href="#" download>Download</a>
+            <button class="btn" type="button" id="tx-close">Close</button>
+          </div>
+        </div>
+        <pre id="tx-body"></pre>
+      </div>
+    </section>
+
+    <footer>Documents are stored on this API host. Call transcripts are uploaded here when a hosted call ends.</footer>
+  </main>
+
+  <script>
+    const bizForm = document.getElementById("biz-form");
+    const bizMsg = document.getElementById("biz-msg");
+    const bizSubmit = document.getElementById("biz-submit");
+    const bizFile = document.getElementById("biz-file");
+    const mapsUrl = document.getElementById("maps-url");
+    const websiteUrl = document.getElementById("website-url");
+    const msg = document.getElementById("msg");
+    const list = document.getElementById("list");
+    const count = document.getElementById("count");
+    const drop = document.getElementById("drop");
+    const dropTitle = document.getElementById("drop-title");
+    const dropHint = document.getElementById("drop-hint");
+    const txMsg = document.getElementById("tx-msg");
+    const txList = document.getElementById("tx-list");
+    const txCount = document.getElementById("tx-count");
+    const txViewer = document.getElementById("tx-viewer");
+    const txTitle = document.getElementById("tx-title");
+    const txBody = document.getElementById("tx-body");
+    const txDownload = document.getElementById("tx-download");
+    const txClose = document.getElementById("tx-close");
+
+    function formatSize(bytes) {
+      if (bytes < 1024) return bytes + " B";
+      if (bytes < 1024 * 1024) return (bytes / 1024).toFixed(1) + " KB";
+      return (bytes / (1024 * 1024)).toFixed(1) + " MB";
+    }
+
+    function formatWhen(iso) {
+      if (!iso) return "";
+      const d = new Date(iso);
+      if (Number.isNaN(d.getTime())) return iso;
+      return d.toLocaleString();
+    }
+
+    function escapeHtml(value) {
+      return String(value)
+        .replaceAll("&", "&amp;")
+        .replaceAll("<", "&lt;")
+        .replaceAll(">", "&gt;")
+        .replaceAll('"', "&quot;");
+    }
+
+    function setStatus(el, text, kind) {
+      el.textContent = text || "";
+      el.className = "status" + (kind ? " " + kind : "");
+    }
+
+    function fileIcon() {
+      return `<span class="file-icon" aria-hidden="true">
+        <svg width="16" height="16" viewBox="0 0 24 24" fill="none">
+          <path d="M7 3.5h7.5L19 8v12.5a1 1 0 0 1-1 1H7a1 1 0 0 1-1-1V4.5a1 1 0 0 1 1-1Z" stroke="currentColor" stroke-width="1.8"/>
+          <path d="M14 3.5V8h5" stroke="currentColor" stroke-width="1.8" stroke-linejoin="round"/>
+        </svg>
+      </span>`;
+    }
+
+    async function refresh() {
+      try {
+        const r = await fetch("/api/files");
+        if (!r.ok) throw new Error(await r.text());
+        const files = await r.json();
+        count.textContent = String(files.length);
+
+        if (!files.length) {
+          list.innerHTML = `<li class="empty">No documents yet<span>Drop a file above, then ingest</span></li>`;
+          return;
+        }
+
+        list.innerHTML = files.map((f, i) => `
+          <li style="animation-delay:${i * 40}ms">
+            ${fileIcon()}
+            <div class="meta">
+              <span class="name" title="${escapeHtml(f.name)}">${escapeHtml(f.name)}</span>
+              <span class="size">${formatSize(f.size)}${f.modified ? " · " + escapeHtml(formatWhen(f.modified)) : ""}</span>
+            </div>
+            <div class="actions">
+              <a class="btn" href="/api/files/${encodeURIComponent(f.name)}/download" download="${escapeHtml(f.name)}">Download</a>
+              <button class="delete" type="button" data-name="${escapeHtml(f.name)}">Remove</button>
+            </div>
+          </li>
+        `).join("");
+      } catch (err) {
+        setStatus(msg, "Failed to load documents.", "err");
+        list.innerHTML = `<li class="empty">Could not load documents<span>${escapeHtml(err.message || err)}</span></li>`;
+      }
+    }
+
+    async function refreshTranscripts() {
+      setStatus(txMsg, "Loading…", "busy");
+      let files;
+      try {
+        const r = await fetch("/api/transcripts");
+        if (!r.ok) throw new Error(await r.text());
+        files = await r.json();
+      } catch (err) {
+        setStatus(txMsg, "Failed to load transcripts.", "err");
+        txList.innerHTML = `<li class="empty">Could not load transcripts<span>${escapeHtml(err.message || err)}</span></li>`;
+        return;
+      }
+
+      txCount.textContent = String(files.length);
+      setStatus(txMsg, files.length ? "" : "No calls recorded yet.");
+
+      if (!files.length) {
+        txList.innerHTML = `<li class="empty">No transcripts yet<span>They appear here after a call ends</span></li>`;
+        return;
+      }
+
+      txList.innerHTML = files.map((f, i) => `
+        <li style="animation-delay:${i * 40}ms">
+          ${fileIcon()}
+          <div class="meta">
+            <span class="name" title="${escapeHtml(f.name)}">${escapeHtml(f.name)}</span>
+            <span class="size">${formatSize(f.size)} · ${escapeHtml(formatWhen(f.modified))}</span>
+          </div>
+          <div class="actions">
+            <button class="btn" type="button" data-view="${escapeHtml(f.name)}">View</button>
+            <a class="btn" href="/api/transcripts/${encodeURIComponent(f.name)}/download" download="${escapeHtml(f.name)}">Download</a>
+          </div>
+        </li>
+      `).join("");
+    }
+
+    async function openTranscript(name) {
+      setStatus(txMsg, "Opening…", "busy");
+      const r = await fetch("/api/transcripts/" + encodeURIComponent(name));
+      if (!r.ok) {
+        setStatus(txMsg, "Open failed: " + await r.text(), "err");
+        return;
+      }
+      const data = await r.json();
+      txTitle.textContent = data.name;
+      txBody.textContent = data.content || "";
+      txDownload.href = "/api/transcripts/" + encodeURIComponent(data.name) + "/download";
+      txDownload.setAttribute("download", data.name);
+      txViewer.classList.add("is-open");
+      setStatus(txMsg, "Loaded.", "ok");
+    }
+
+    function syncDropCopy() {
+      const file = bizFile.files && bizFile.files[0];
+      if (file) {
+        dropTitle.textContent = file.name;
+        dropHint.innerHTML = "Selected · " + formatSize(file.size) + " · click to change";
+        drop.classList.add("has-file");
+      } else {
+        dropTitle.textContent = "Drop a document here";
+        dropHint.innerHTML = "or <strong>browse files</strong> · PDF, CSV, TXT and more";
+        drop.classList.remove("has-file");
+      }
+    }
+
+    function assignDroppedFile(file) {
+      if (!file) return;
+      const dt = new DataTransfer();
+      dt.items.add(file);
+      bizFile.files = dt.files;
+      syncDropCopy();
+    }
+
+    async function ingestBusiness(event) {
+      event.preventDefault();
+      const file = bizFile.files && bizFile.files[0];
+      const maps = (mapsUrl.value || "").trim();
+      const website = (websiteUrl.value || "").trim();
+      if (!file && !maps && !website) {
+        setStatus(bizMsg, "Add a Maps URL, website URL, document, or any mix.", "err");
+        return;
+      }
+
+      const fd = new FormData();
+      if (maps) fd.append("maps_url", maps);
+      if (website) fd.append("website_url", website);
+      if (file) fd.append("file", file);
+
+      bizSubmit.disabled = true;
+      setStatus(bizMsg, "Fetching sources and uploading to Qdrant… this can take a minute.", "busy");
+      try {
+        const r = await fetch("/api/business", { method: "POST", body: fd });
+        const text = await r.text();
+        let data = null;
+        try { data = JSON.parse(text); } catch {}
+        if (!r.ok) {
+          const detail = (data && (data.detail || data.message)) || text;
+          throw new Error(typeof detail === "string" ? detail : JSON.stringify(detail));
+        }
+        const names = (data && data.ingested) || [];
+        const chunks = data && data.chunks != null ? ` (${data.chunks} chunks)` : "";
+        const warnings = (data && data.warnings) || [];
+        let note = "Ingested " + (names.join(", ") || "successfully") + chunks + ".";
+        if (warnings.length) note += " Note: " + warnings.join(" ");
+        setStatus(bizMsg, note, warnings.length ? "busy" : "ok");
+        bizForm.reset();
+        syncDropCopy();
+        refresh();
+      } catch (err) {
+        setStatus(bizMsg, "Ingest failed: " + (err.message || err), "err");
+      } finally {
+        bizSubmit.disabled = false;
+      }
+    }
+
+    bizForm.addEventListener("submit", ingestBusiness);
+    bizFile.addEventListener("change", syncDropCopy);
+
+    ["dragenter", "dragover"].forEach((evt) => {
+      drop.addEventListener(evt, (e) => {
+        e.preventDefault();
+        drop.classList.add("is-drag");
+      });
+    });
+
+    ["dragleave", "drop"].forEach((evt) => {
+      drop.addEventListener(evt, (e) => {
+        e.preventDefault();
+        drop.classList.remove("is-drag");
+      });
+    });
+
+    drop.addEventListener("drop", (e) => {
+      assignDroppedFile(e.dataTransfer.files[0]);
+    });
+
+    list.addEventListener("click", async (e) => {
+      const btn = e.target.closest("button[data-name]");
+      if (!btn) return;
+      setStatus(msg, "Removing…", "busy");
+      const r = await fetch("/api/files/" + encodeURIComponent(btn.dataset.name), { method: "DELETE" });
+      if (r.ok) {
+        setStatus(msg, "Removed.", "ok");
+      } else {
+        setStatus(msg, "Delete failed: " + await r.text(), "err");
+      }
+      refresh();
+    });
+
+    txList.addEventListener("click", (e) => {
+      const btn = e.target.closest("button[data-view]");
+      if (!btn) return;
+      openTranscript(btn.dataset.view);
+    });
+
+    txClose.addEventListener("click", () => {
+      txViewer.classList.remove("is-open");
+      txBody.textContent = "";
+    });
+
+    refresh();
+    refreshTranscripts();
+  </script>
+</body>
+</html>

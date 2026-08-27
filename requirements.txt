@@ -1,0 +1,16 @@
+# API
+fastapi
+uvicorn[standard]
+python-multipart
+pydantic
+python-dotenv
+
+# Document / business ingest
+pypdf
+qdrant-client
+sentence-transformers
+torch
+
+# LiveKit voice agent (Gemini Live)
+livekit-agents
+livekit-plugins-google
